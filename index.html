@@ -116,10 +116,15 @@
             background-color: darkgray;
             color: black;
             border: none;
-            border-radius: 15px;
-            font-size: 18px;
+            border-radius: 50%;
+            font-size: 20px;
             cursor: pointer;
             padding: 5px 10px;
+            transition: background-color 0.3s, transform 0.3s; /* Transición para hover */
+        }
+        #popup .close-button:hover {
+            background-color: rgb(72, 71, 71);/*Fondo más opaco al hacer hover */
+            transform: scale(1.1); /* Aumentar ligeramente el tamaño al hacer hover */
         }
         #popup .carousel-wrapper {
             position: relative;
@@ -251,6 +256,7 @@
         // Script para las imagenes del carrusel de integrantes
         const images = [
             { url: 'img/NasaSpaceAppLogo.png'},
+            { url: 'img/tabla_composicion.jpeg', title: "Datos clave sobre los planetas del orrery. Incluye: peso, distancia a la Tierra, número de anillos y lunas, y temperatura aproximada."},
             
             { url: 'img/integrantes/elias.jpeg', title: "Cruz Cervantes Daniel Adrian Elias,\n Ingeniería Aeroespacial. Facultad de Ingeniería, UNAM. 5to semestre."},
             { url: 'img/integrantes/arantxa.jpeg', title: "Morales Rodriguez Arantxa,\n Ingeniería Aeroespacial, Facultad de Ingeniería, UNAM. 5to semestre."},
