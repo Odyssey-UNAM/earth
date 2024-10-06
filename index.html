@@ -373,7 +373,7 @@
             const day = cell.getAttribute('data-day');
             selectedDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
             selectedDateSpan.textContent = `Día seleccionado: ${selectedDate}`;
-            console.log(`Fecha seleccionada correctamente: ${selectedDate}`);
+            // console.log(`Fecha seleccionada correctamente: ${selectedDate}`);
 
             // Llamar a la función para actualizar la escena
             updateSceneWithSelectedDate();
@@ -491,7 +491,7 @@ scene.add(starField);
                 const data = await response.json();
                 return data; // Asumiendo que 'data' contiene directamente los datos orbitales
             } catch (error) {
-                console.error(`Error al obtener los datos orbitales para el ID ${id}:`, error);
+                // console.error(`Error al obtener los datos orbitales para el ID ${id}:`, error);
                 return null;
             }
         }
@@ -543,7 +543,7 @@ scene.add(starField);
                 const data = await response.json();
                 return data.data;
             } catch (error) {
-                console.error('Error al obtener los objetos cercanos a la Tierra:', error);
+                // console.error('Error al obtener los objetos cercanos a la Tierra:', error);
                 return [];
             }
         }
@@ -605,13 +605,34 @@ scene.add(starField);
                         const infoBox = document.getElementById('infoBox');
                         const infoContent = document.getElementById('infoContent');
 
-                        // Formatear la información en HTML
-                        infoContent.innerHTML = `
-                            <strong>Objeto:</strong> ${data.name}<br>
-                            <strong>ID:</strong> ${data.id}<br>
-                            <strong>Elementos orbitales:</strong><br>
-                            <pre>${JSON.stringify(data.orbitalElements, null, 2)}</pre>
-                        `;
+                        // Cambiar el estilo del cuadro de información para tener un fondo semi-blanco
+                infoBox.style.backgroundColor = 'rgba(255, 255, 255, 0.30)'; // Fondo blanco con 15% de opacidad
+
+let orbitalElementsHTML = '';
+for (const key in data.orbitalElements) {
+    if (data.orbitalElements.hasOwnProperty(key)) {
+        orbitalElementsHTML += `
+            <div>
+                <strong style="color: #FFFFFF;">${key}:</strong>
+                <strong style="color: #dacaff;">${data.orbitalElements[key]}</span> &nbsp;&nbsp;
+            </div>
+        `;
+    }
+}
+
+infoContent.innerHTML = ` 
+    <strong style="color: #FFFFFF;">Objeto:</strong> 
+    <strong style="color: #dacaff;">${data.name}</span><br>
+    <strong style="color: #FFFFFF;">ID:</strong> 
+    <strong style="color: #dacaff;">${data.id}</span><br>
+    <strong style="color: #FFFFFF;">Elementos orbitales:</strong><br>
+    ${orbitalElementsHTML}
+    <strong style="color: #FFFFFF;">Es potencialmente peligroso:</strong> 
+    <strong style="color: #dacaff;">${data.is_potentially_hazardous_asteroid ? 'Sí' : 'No'}</span><br>
+    <div style="margin-top: 10px; text-align: center;">
+        <img src="textures/nasa.png" alt="NASA Logo" style="width: 100px; height: auto;">
+    </div>
+`;
 
                         // Mostrar el cuadro de información
                         infoBox.style.display = 'block';
@@ -630,7 +651,7 @@ scene.add(starField);
                     }
                 }
 
-                mouseMoved = false;
+                mouseMoved = false; 
             }
 
             renderer.render(scene, camera);
@@ -649,9 +670,9 @@ scene.add(starField);
             for (const obj of objects) {
                 const id = obj.id;
                 const data = await fetchOrbitalData(id);
-                console.log(data);
+                // console.log(data);
                 const orbitalData = data?.orbital_data;
-                console.log(orbitalData);
+                // console.log(orbitalData);
                 if (!orbitalData) continue;
 
                 const orbitalElements = {
