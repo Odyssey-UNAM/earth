@@ -192,8 +192,9 @@ async function loadAndVisualizeObjects() {
     for (const obj of objects) {
         const id = obj.id;
         const data = await fetchOrbitalData(id);
-        const orbitalData = data?.orbital_elements;
-        
+        console.log(data);
+        const orbitalData = data?.orbital_data;        ;
+        console.log(orbitalData);
         if (!orbitalData) continue;
 
         const orbitalElements = {
