@@ -74,6 +74,9 @@ let INTERSECTED = null;
         camera.position.set(0, 4, 20);
 
         const textureLoader = new THREE.TextureLoader();
+        textureLoader.load('textures/2k_stars_milky_way.jpg', (texture) => {
+            scene.background = texture;
+        });
 const originalTexture = textureLoader.load('textures/meteorito.jpg', (texture) => {
     // Escalar la textura a un tamaño menor (por ejemplo, 4096x4096)
     texture.image.width = 21600;
@@ -220,6 +223,7 @@ async function loadAndVisualizeObjects() {
         
         // Cargar la textura y el mapa de desplazamiento para los asteroides
         const textureLoader = new THREE.TextureLoader();
+
         const asteroidTexture = textureLoader.load('textures/meteorito.jpg'); // Reemplaza con la ruta de tu imagen de textura
          // Reemplaza con la ruta de tu mapa de desplazamiento
 
