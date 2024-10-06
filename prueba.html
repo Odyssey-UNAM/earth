@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js - Esfera con Múltiples Texturas</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: black;
+        }
+
+        .calendar-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: rgba(0, 0, 0, 0.8); /* Fondo con transparencia del 80% */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            overflow: hidden;
+            width: 220px;
+            font-size: 12px;
+        }
+
+        .calendar-header {
+            background-color: rgba(0, 0, 0, 0.8); /* Encabezado con 80% de transparencia */
+            color: #ffffff;
+            text-align: center;
+            padding: 5px 0;
+            font-size: 14px;
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+        }
+
+        .calendar-header select {
+            background-color: #ffffff;
+            border: 1px solid #ddd;
+            padding: 2px;
+            margin: 2px;
+            font-size: 10px;
+            border-radius: 5px;
+            outline: none;
+        }
+
+        .calendar-body {
+            padding: 5px;
+        }
+
+        .calendar-body table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: center;
+        }
+
+        .calendar-body th, .calendar-body td {
+            padding: 5px;
+        }
+
+        .calendar-body th {
+            background-color: rgba(238, 238, 238, 0.8); /* Fondo de encabezados con 80% de transparencia */
+            color: #333333;
+            font-size: 12px;
+        }
+
+        .calendar-body td {
+            color: #666666;
+            border: 1px solid rgba(221, 221, 221, 0.8); /* Bordes con 80% de transparencia */
+            cursor: pointer;
+        }
+
+        .calendar-body td.disabled {
+            color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        .calendar-body td:hover:not(.disabled) {
+            background-color: rgba(245, 245, 245, 0.8); /* Hover con transparencia */
+        }
+
+        .selected-day {
+            background-color: rgba(255, 152, 0, 0.8) !important;
+            color: #ffffff !important;
+            font-weight: bold;
+        }
+
+        .calendar-footer {
+            text-align: center;
+            padding: 5px 0;
+            background-color: rgba(0, 0, 0, 0.8); /* Pie de página con 80% de transparencia */
+            color: #ffffff;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    
+ <!-- Cuadro de diálogo flotante para mostrar información -->
+ <div id="infoBox" style="
+ display: none;
+ position: absolute;
+ top: 20px;
+ left: 20px;
+ background: rgba(0, 0, 0, 0.7); 
+ color: white;
+ padding: 15px;
+ border-radius: 10px;
+ font-family: Arial, sans-serif;
+ font-size: 14px;
+ z-index: 1000;">
+ <span id="closeButton" style="
+     cursor: pointer; 
+     position: absolute; 
+     top: 5px; 
+     right: 10px; 
+     font-weight: bold; 
+     font-size: 16px;">&times;</span>
+ <div id="infoContent"></div>
+</div>
+<div class="calendar-container">
+    <div class="calendar-header">
+        <select id="year-selector"></select>
+        <select id="month-selector">
+            <option value="0">Enero</option>
+            <option value="1">Febrero</option>
+            <option value="2">Marzo</option>
+            <option value="3">Abril</option>
+            <option value="4">Mayo</option>
+            <option value="5">Junio</option>
+            <option value="6">Julio</option>
+            <option value="7">Agosto</option>
+            <option value="8">Septiembre</option>
+            <option value="9">Octubre</option>
+            <option value="10">Noviembre</option>
+            <option value="11">Diciembre</option>
+        </select>
+    </div>
+    <div class="calendar-body">
+        <table>
+            <thead>
+                <tr>
+                    <th>Lun</th>
+                    <th>Mar</th>
+                    <th>Mié</th>
+                    <th>Jue</th>
+                    <th>Vie</th>
+                    <th>Sáb</th>
+                    <th>Dom</th>
+                </tr>
+            </thead>
+            <tbody id="calendar-days">
+            </tbody>
+        </table>
+    </div>
+    <div class="calendar-footer">
+        <span id="selected-date">Selecciona un día</span>
+    </div>
+</div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script>
+         const yearSelector = document.getElementById('year-selector');
+        const monthSelector = document.getElementById('month-selector');
+        const calendarDays = document.getElementById('calendar-days');
+        const selectedDateSpan = document.getElementById('selected-date');
+
+        // Variable para almacenar la fecha seleccionada
+        let selectedDate = '';
+
+        // Fecha mínima y máxima
+        const minDate = new Date(2016, 0, 1);
+        const maxDate = new Date(2024, 9, 5);
+
+        // Llenar el selector de años con el rango de fechas limitadas
+        for (let i = minDate.getFullYear(); i <= maxDate.getFullYear(); i++) {
+            const option = document.createElement('option');
+            option.value = i;
+            option.textContent = i;
+            yearSelector.appendChild(option);
+        }
+
+        // Función para generar el calendario basado en año y mes
+        function generateCalendar(year, month) {
+            calendarDays.innerHTML = ''; // Limpiar el calendario
+
+            // Obtener el primer día y el número de días del mes
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            let day = 1;
+
+            // Ajuste del primer día para comenzar el lunes
+            let row = document.createElement('tr');
+            for (let i = 1; i < firstDay; i++) {
+                const cell = document.createElement('td');
+                row.appendChild(cell);
+            }
+
+            // Crear las celdas de los días del mes
+            for (day = 1; day <= daysInMonth; day++) {
+                const cell = document.createElement('td');
+                cell.textContent = day;
+                cell.setAttribute('data-day', day);
+
+                const cellDate = new Date(year, month, day);
+                if (cellDate >= minDate && cellDate <= maxDate) {
+                    cell.onclick = () => selectDay(cell, year, month);
+                } else {
+                    cell.classList.add('disabled');
+                }
+                row.appendChild(cell);
+
+                if (row.children.length === 7) {
+                    calendarDays.appendChild(row);
+                    row = document.createElement('tr');
+                }
+            }
+
+            calendarDays.appendChild(row);
+        }
+
+        function selectDay(cell, year, month) {
+            if (cell.classList.contains('disabled')) return;
+
+            const previousSelected = document.querySelector('.selected-day');
+            if (previousSelected) previousSelected.classList.remove('selected-day');
+
+            cell.classList.add('selected-day');
+            const day = cell.getAttribute('data-day');
+            selectedDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            selectedDateSpan.textContent = `Día seleccionado: ${selectedDate}`;
+            console.log(`Fecha seleccionada correctamente: ${selectedDate}`);
+        }
+
+        yearSelector.addEventListener('change', () => {
+            generateCalendar(parseInt(yearSelector.value), parseInt(monthSelector.value));
+        });
+
+        monthSelector.addEventListener('change', () => {
+            generateCalendar(parseInt(yearSelector.value), parseInt(monthSelector.value));
+        });
+
+        yearSelector.value = maxDate.getFullYear();
+        monthSelector.value = maxDate.getMonth();
+        generateCalendar(maxDate.getFullYear(), maxDate.getMonth());
+
+
+        const clickableObjects = [];
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+        const mu = 0.01720209895 * 0.01720209895; // (UA^3 / día^2)
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+
+
+        renderer.domElement.addEventListener('mousemove', onMouseMove, true);
+
+        // Variable global para almacenar el objeto intersectado
+let INTERSECTED = null;
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
+        scene.add(ambientLight);
+
+        const sunLight = new THREE.DirectionalLight(0xffffff, 3);
+        sunLight.position.set(50, 50, 50);
+        sunLight.castShadow = true;
+        sunLight.shadow.mapSize.width = 1024;
+        sunLight.shadow.mapSize.height = 1024;
+        scene.add(sunLight);
+
+        camera.position.set(0, 4, 20);
+
+        const textureLoader = new THREE.TextureLoader();
+        textureLoader.load('textures/2k_stars_milky_way.jpg', (texture) => {
+            scene.background = texture;
+        });
+const originalTexture = textureLoader.load('textures/meteorito.jpg', (texture) => {
+    // Escalar la textura a un tamaño menor (por ejemplo, 4096x4096)
+    texture.image.width = 21600;
+    texture.image.height = 10800;
+    texture.needsUpdate = true;
+});
+
+        const earthTexture = textureLoader.load('textures/earth albedo.jpg');
+        const bumpTexture = textureLoader.load('textures/earth bump.jpg');
+        const nightTexture = textureLoader.load('textures/earth night_lights_modified.png');
+        const specularTexture = textureLoader.load('textures/earth land ocean mask.png');
+        const cloudTexture = textureLoader.load('textures/clouds earth.png');
+
+        const earthGeometry = new THREE.SphereGeometry(12, 64, 64);
+        const earthMaterial = new THREE.MeshStandardMaterial({
+            map: earthTexture,
+            bumpMap: bumpTexture,
+            bumpScale: 0.2,
+            metalnessMap: specularTexture,
+            roughness: 0.5,
+            emissiveMap: nightTexture,
+            emissive: new THREE.Color(0xFF912F),
+            emissiveIntensity: 3,
+            color: new THREE.Color(0x888888),
+            transparent: true
+        });
+
+        const earth = new THREE.Mesh(earthGeometry, earthMaterial);
+        scene.add(earth);
+
+        const cloudGeometry = new THREE.SphereGeometry(12.1, 64, 64);
+        const cloudMaterial = new THREE.MeshStandardMaterial({
+            map: cloudTexture,
+            transparent: true,
+            opacity: 0.6
+        });
+        const clouds = new THREE.Mesh(cloudGeometry, cloudMaterial);
+        scene.add(clouds);
+
+        renderer.shadowMap.enabled = true;
+        earth.castShadow = true;
+        clouds.castShadow = false;
+
+        function updateDayNightCycle() {
+            const sunDirection = new THREE.Vector3().copy(sunLight.position).normalize();
+            const angle = earth.position.clone().normalize().dot(sunDirection);
+            earthMaterial.emissiveIntensity = Math.max(1.8 * (1 - Math.abs(angle)), 0);
+            earthMaterial.color.setScalar(Math.max(0.3 + 0.7 * Math.abs(angle), 0.3));
+        }
+// Función para obtener los datos orbitales de un objeto dado su ID
+async function fetchOrbitalData(id) {
+    const objectUrl = `https://backnear-production.up.railway.app/orbital-data/${id}`;
+    try {
+        const response = await fetch(objectUrl);
+        const data = await response.json();
+        return data; // Asumiendo que 'data' contiene directamente los datos orbitales
+    } catch (error) {
+        console.error(`Error al obtener los datos orbitales para el ID ${id}:`, error);
+        return null;
+    }
+}
+function keplerianToCartesian(orbitalElements, mu) {
+    const { semi_major_axis: a, eccentricity: e, inclination: i, ascending_node_longitude: omega, perihelion_argument: w, mean_anomaly: M } = orbitalElements;
+    const degToRad = Math.PI / 180;
+    const I = i * degToRad;
+    const Ω = omega * degToRad;
+    const ω = w * degToRad;
+    const M_rad = M * degToRad;
+
+    let E = M_rad;
+    let delta = 1;
+    while (delta > 1e-6) {
+        const E_next = E - (E - e * Math.sin(E) - M_rad) / (1 - e * Math.cos(E));
+        delta = Math.abs(E_next - E);
+        E = E_next;
+    }
+
+    const x_orb = a * (Math.cos(E) - e);
+    const y_orb = a * Math.sqrt(1 - e * e) * Math.sin(E);
+
+    const cosΩ = Math.cos(Ω);
+    const sinΩ = Math.sin(Ω);
+    const cosI = Math.cos(I);
+    const sinI = Math.sin(I);
+    const cosω = Math.cos(ω);
+    const sinω = Math.sin(ω);
+
+    const x = (cosΩ * cosω - sinΩ * sinω * cosI) * x_orb +
+              (-cosΩ * sinω - sinΩ * cosω * cosI) * y_orb;
+    const y = (sinΩ * cosω + cosΩ * sinω * cosI) * x_orb +
+              (-sinΩ * sinω + cosΩ * cosω * cosI) * y_orb;
+    const z = (sinω * sinI) * x_orb +
+              (cosω * sinI) * y_orb;
+
+    // Rotación de 90 grados alrededor del eje X
+    const y_rotated = z;
+    const z_rotated = -y;
+
+    return new THREE.Vector3(x, y_rotated, z_rotated);
+}
+
+        async function fetchNearEarthObjects(date) {
+            const apiUrl = `https://backnear-production.up.railway.app/data?date=${date}`;
+            try {
+                const response = await fetch(apiUrl);
+                const data = await response.json();
+                return data.data;
+            } catch (error) {
+                console.error('Error al obtener los objetos cercanos a la Tierra:', error);
+                return [];
+            }
+        }
+        const orbitGroups = []; // Array para almacenar los grupos de las órbitas
+
+// Función principal para cargar y visualizar los objetos
+async function loadAndVisualizeObjects() {
+    const date = selectedDate || '2021-10-05'; // Fecha por defecto
+    const objects = await fetchNearEarthObjects(date);
+
+    if (objects.length === 0) return;
+
+    for (const obj of objects) {
+        const id = obj.id;
+        const data = await fetchOrbitalData(id);
+
+        const orbitalData = data?.orbital_data;        ;
+        if (!orbitalData) continue;
+
+        const orbitalElements = {
+            name: obj.name || `Objeto ${id}`,
+            semi_major_axis: parseFloat(orbitalData.semi_major_axis),
+            eccentricity: parseFloat(orbitalData.eccentricity),
+            inclination: parseFloat(orbitalData.inclination),
+            ascending_node_longitude: parseFloat(orbitalData.ascending_node_longitude),
+            perihelion_argument: parseFloat(orbitalData.perihelion_argument),
+            mean_anomaly: parseFloat(orbitalData.mean_anomaly)
+        };
+
+        const orbitGroup = new THREE.Group(); // Crear un grupo para cada órbita
+        const orbitPoints = generateOrbitPoints(orbitalElements, mu);
+        const orbitGeometry = new THREE.BufferGeometry().setFromPoints(orbitPoints);
+        const orbitMaterial = new THREE.LineBasicMaterial({ color: 0x2e2e2e, linewidth: 1 });
+
+        const orbitLine = new THREE.Line(orbitGeometry, orbitMaterial);
+        orbitGroup.add(orbitLine);
+
+        // Calcular la posición actual del asteroide
+        const currentPosition = keplerianToCartesian(orbitalElements, mu);
+        
+        // Cargar la textura y el mapa de desplazamiento para los asteroides
+        const textureLoader = new THREE.TextureLoader();
+
+        const asteroidTexture = textureLoader.load('textures/meteorito.jpg'); // Reemplaza con la ruta de tu imagen de textura
+         // Reemplaza con la ruta de tu mapa de desplazamiento
+
+        // Crear una geometría con más vértices para la forma irregular del asteroide
+        const asteroidGeometry = new THREE.IcosahedronGeometry(1, 2); // Icosaedro con subdivisiones para más detalle
+
+        // Crear el material con la textura cargada y aplicar el mapa de desplazamiento
+       // Crear el material con la textura cargada y sin el displacementMap
+const asteroidMaterial = new THREE.MeshStandardMaterial({
+    map: asteroidTexture,
+    roughness: 0.8,
+    metalness: 0.1
+});
+
+
+        // Crear el objeto Mesh (Icosaedro) para el asteroide y aumentar su tamaño
+        const asteroid = new THREE.Mesh(asteroidGeometry, asteroidMaterial);
+        asteroid.scale.set(3, 3, 3); // Aumentar el tamaño del asteroide
+        asteroid.position.copy(currentPosition).multiplyScalar(scaleFactor);
+        orbitGroup.add(asteroid);
+
+        // Agregar el grupo de la órbita y el asteroide a la escena
+        scene.add(orbitGroup);
+
+        // Almacenar el grupo en el array de órbitas
+        orbitGroups.push(orbitGroup);
+
+        // Almacenar referencia a la esfera y sus datos para interacción
+        asteroid.userData = {
+            orbitalElements: orbitalElements,
+            id: id,
+            name: obj.name || `Objeto ${id}`,
+            // Puedes agregar más información si lo deseas
+        };
+        clickableObjects.push(asteroid);
+    }
+    
+    animate();
+}
+
+
+
+        const scaleFactor = 100;
+
+        function generateOrbitPoints(orbitalElements, mu, segments = 360) {
+            const points = [];
+            for (let M = 0; M < 360; M += 360 / segments) {
+                const updatedElements = { ...orbitalElements, mean_anomaly: M };
+                const position = keplerianToCartesian(updatedElements, mu).multiplyScalar(scaleFactor);
+                points.push(position);
+            }
+            points.push(points[0]);
+            return points;
+        }
+// Variables para controlar si el mouse se ha movido
+let mouseMoved = false;
+let cursorEvent;
+// Función de animación para actualizar la escena
+function animate() {
+
+    requestAnimationFrame(animate);
+    
+    // Rotar la Tierra y las nubes
+    earth.rotation.y += 0.001;
+    clouds.rotation.y += 0.0012;
+
+    // Actualizar el ciclo de día y noche
+    updateDayNightCycle();
+    
+    // Aplicar rotación a cada grupo de órbitas
+    orbitGroups.forEach(group => {
+        group.rotation.y += 0.0009; // Ajustar el valor según la velocidad de rotación deseada
+    });
+
+    controls.update();
+// Si el mouse se ha movido, actualizar el raycaster
+if (mouseMoved) {
+        // Actualizar el raycaster con la posición del mouse y la cámara
+        raycaster.setFromCamera(mouse, camera);
+
+        // Calcular los objetos que intersectan con el rayo
+        const intersects = raycaster.intersectObjects(clickableObjects);
+
+        if (intersects.length > 0) {
+            const intersectedObject = intersects[0].object;
+
+            if (INTERSECTED !== intersectedObject) {
+                INTERSECTED = intersectedObject;
+
+                // Acceder a los datos almacenados en el objeto
+                const data = INTERSECTED.userData;
+
+                // Mostrar la información en el cuadro de diálogo
+                const infoBox = document.getElementById('infoBox');
+                const infoContent = document.getElementById('infoContent');
+
+                // Formatear la información en HTML
+               // Cambiar el estilo del cuadro de información para tener un fondo semi-blanco
+                infoBox.style.backgroundColor = 'rgba(255, 255, 255, 0.30)'; // Fondo blanco con 15% de opacidad
+
+                let orbitalElementsHTML = '';
+                for (const key in data.orbitalElements) {
+                    if (data.orbitalElements.hasOwnProperty(key)) {
+                        orbitalElementsHTML += `
+                            <div>
+                                <strong style="color: #FFFFFF;">${key}:</strong>
+                                <strong style="color: #dacaff;">${data.orbitalElements[key]}</span> &nbsp;&nbsp;
+                            </div>
+                        `;
+                    }
+                }
+
+                infoContent.innerHTML = ` 
+                    <strong style="color: #FFFFFF;">Objeto:</strong> 
+                    <strong style="color: #dacaff;">${data.name}</span><br>
+                    <strong style="color: #FFFFFF;">ID:</strong> 
+                    <strong style="color: #dacaff;">${data.id}</span><br>
+                    <strong style="color: #FFFFFF;">Elementos orbitales:</strong><br>
+                    ${orbitalElementsHTML}
+                    <strong style="color: #FFFFFF;">Es potencialmente peligroso:</strong> 
+                    <strong style="color: #dacaff;">${data.is_potentially_hazardous_asteroid ? 'Sí' : 'No'}</span><br>
+                    <div style="margin-top: 10px; text-align: center;">
+                        <img src="textures/nasa.png" alt="NASA Logo" style="width: 100px; height: auto;">
+                    </div>
+                `;
+
+                // Mostrar el cuadro de información
+infoBox.style.display = 'block';
+                    }
+
+            // Actualizar la posición del cuadro de información cerca del cursor
+            const infoBox = document.getElementById('infoBox');
+            infoBox.style.left = `${cursorEvent.clientX + 15}px`;
+            infoBox.style.top = `${cursorEvent.clientY + 15}px`;
+            console.log('llegue aqui')
+        } else {
+            // No hacemos nada; el infoBox permanece visible y en su posición actual
+            // Si deseas ocultar el infoBox cuando se hace clic fuera de los objetos, puedes agregar un evento adicional
+        }
+
+        mouseMoved = false;
+    }
+
+
+
+    renderer.render(scene, camera);
+
+
+}
+
+// Cargar y visualizar los objetos y ejecutar la animación
+loadAndVisualizeObjects();
+
+
+
+function onMouseMove(event) {
+    event.preventDefault();
+
+    // Obtener el rectángulo del canvas para calcular las coordenadas correctas
+    const rect = renderer.domElement.getBoundingClientRect();
+
+    // Convertir las coordenadas del mouse a coordenadas normalizadas del dispositivo (-1 a +1)
+    mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+    // Guardar el evento para usar la posición del cursor
+    cursorEvent = event;
+
+    mouseMoved = true;
+}
+
+// Manejador para cerrar el cuadro de diálogo cuando se haga clic en el botón de cerrar
+document.getElementById('closeButton').addEventListener('click', function () {
+    document.getElementById('infoBox').style.display = 'none';
+    INTERSECTED = null;
+});
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+    </script>
+</body>
+</html>
